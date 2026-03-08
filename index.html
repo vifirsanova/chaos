@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHAOS</title>
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <span>[CHAOS::TERMINAL]</span>
+                <span class="status">v0.2 // PROTO</span>
+            </div>
+	    <div class="hourglass" id="hourglass">⧗</div>
+        </div>
+        
+        <div class="nav" id="nav">
+            <div class="nav-item active" data-view="global">[F1] GLOBAL</div>
+            <div class="nav-item" data-view="private">[F2] PRIVATE</div>
+            <div class="nav-item" data-view="feed">[F3] FEED</div>
+            <div class="nav-item" data-view="myvoid">[F4] MY VOID</div>
+            <div class="nav-item" data-view="manifest">[F5] MANIFEST</div>
+        </div>    
+        
+        <div class="chat-container" id="chatContainer">
+            <!-- Global Chat View -->
+            <div class="view active" id="view-global">
+                <!-- будут сообщения -->
+            </div>
+            
+            <!-- Private Messages View -->
+            <div class="view" id="view-private">
+               <div class="users-list" id="privateUsersList" style="margin-bottom: 15px;"></div>
+	       <div id="privateMessages" style="height: calc(100% - 100px); overflow-y: auto;"></div>
+	    </div>
+            
+            <!-- Feed View -->
+            <div class="view" id="view-feed">
+                <!-- будут посты -->
+            </div>
+            
+            <!-- My Void View -->
+            <div class="view" id="view-myvoid">
+                <!-- будут мои посты -->
+            </div>
+            
+            <!-- Manifest View -->
+            <div class="view" id="view-manifest">
+                <div class="message system">
+                    <div class="content">
+                        <pre>
+MANIFESTO
+
+1. NO FOLLOWS. NO LIKES. NO ALGORITHMS.
+2. THE VOID IS YOURS.
+3. THIS IS NOT A SOCIAL NETWORK.
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+	<div class="input-area" id="inputArea">
+	    <div style="display: flex; gap: 5px; flex: 1;">
+		<input type="text" placeholder="> type your message..." id="messageInput" style="flex: 1;">
+		<button id="attachBtn" style="background: #000; border: 2px solid #00d480; color: #00d480; padding: 10px; cursor: pointer; font-family: 'Courier New', monospace;">[ATTACH]</button>
+	    </div>
+	    <button id="sendBtn">[SEND]</button>
+	</div>        
+
+	<input type="file" id="fileInput" style="display: none;" multiple>
+        
+        <div class="status" style="margin-top: 10px;">
+            ENCRYPTED :: NO LOGS :: 
+        </div>
+    </div>
+
+    <script src="./js/script.js"></script>
+</body>
+</html>
