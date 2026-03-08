@@ -2,6 +2,9 @@
 
 P2P mesh messenger with glass terminal UI
 
+<img width="1188" height="936" alt="image" src="https://github.com/user-attachments/assets/468e7f5c-11a4-4a56-9d8f-b3d1c09ee31d" />
+
+
 ## Structure
 
 - `app/` — Python backend (models, repositories)
