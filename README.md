@@ -2,6 +2,7 @@
 
 P2P mesh messenger with glass terminal UI
 
+![](screen.jpg)
 
 ## Structure
 

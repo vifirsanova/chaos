@@ -1,12 +1,24 @@
+/* styles.css */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+:root {
+    --glass-bg: rgba(0, 20, 0, 0.65);
+    --glass-border: rgba(0, 212, 128, 0.3);
+    --glass-highlight: rgba(0, 212, 128, 0.1);
+    --terminal-green: #00d480;
+    --terminal-green-dim: #006b40;
+}
+
 body {
     background: #000;
-    color: #00d480;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 212, 128, 0.05) 0%, transparent 30%),
+        radial-gradient(circle at 90% 70%, rgba(0, 212, 128, 0.05) 0%, transparent 40%);
+    color: var(--terminal-green);
     font-family: 'Courier New', monospace;
     font-size: 14px;
     line-height: 1.4;
@@ -14,6 +26,34 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+/* Background Blobs */
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.4;
+    z-index: -1;
+}
+
+.blob-1 {
+    width: 400px;
+    height: 400px;
+    background: #00d480;
+    top: 10%;
+    left: 20%;
+    opacity: 0.15;
+}
+
+.blob-2 {
+    width: 300px;
+    height: 300px;
+    background: #00d480;
+    bottom: 10%;
+    right: 20%;
+    opacity: 0.1;
 }
 
 .container {
@@ -23,43 +63,186 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    border: 3px solid #00d480;
+    border: 2px solid var(--glass-border);
+    background: var(--glass-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 0 20px rgba(0, 212, 128, 0.2);
     padding: 10px;
+    border-radius: 24px;
 }
 
 .header {
-    border-bottom: 3px solid #00d480;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     text-transform: uppercase;
+    text-shadow: 0 0 5px var(--terminal-green);
+    border-bottom: none;
 }
 
-.header pre {
-    color: #00d480;
-    font-size: 8px;
-    line-height: 1;
-    margin-top: 5px;
+.header:first-child {
+    padding-top: 6px;
+    margin-top: 6px;
+}
+
+/* F1-F5 NAVIGATION - all equal width, single horizontal line, no wrap */
+.nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: none;
+    padding-bottom: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Hide scrollbar for nav but keep functionality */
+.nav::-webkit-scrollbar {
+    display: none;
+}
+
+.nav {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* F1-F5 buttons - equal width, same rounded corners */
+.nav-item {
+    background: rgba(0, 20, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 212, 128, 0.2);
+    border-top: 1px solid rgba(0, 212, 128, 0.3);
+    border-left: 1px solid rgba(0, 212, 128, 0.3);
+    border-radius: 20px;
+    color: var(--terminal-green);
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 8px 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: none;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+/* NO HOVER EFFECTS for F1-F5 buttons - completely static */
+.nav-item:hover {
+    background: rgba(0, 20, 0, 0.4);
+    border-color: rgba(0, 212, 128, 0.2);
+    box-shadow: none;
+    transform: none;
+}
+
+.nav-item.active {
+    background: rgba(0, 212, 128, 0.2);
+    border-color: var(--terminal-green);
+}
+
+/* Glass icon buttons - rounded corners */
+.glass-icon-btn {
+    background: rgba(0, 20, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 212, 128, 0.2);
+    border-top: 1px solid rgba(0, 212, 128, 0.3);
+    border-left: 1px solid rgba(0, 212, 128, 0.3);
+    border-radius: 20px;
+    color: var(--terminal-green);
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.glass-icon-btn:hover {
+    background: rgba(0, 20, 0, 0.4);
+    border-color: rgba(0, 212, 128, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transform: none;
+}
+
+/* Input area buttons - same size for attach and send */
+.input-area button {
+    background: rgba(0, 20, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 212, 128, 0.2);
+    border-top: 1px solid rgba(0, 212, 128, 0.3);
+    border-left: 1px solid rgba(0, 212, 128, 0.3);
+    border-radius: 20px;
+    color: var(--terminal-green);
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    width: 52px;
+    height: 48px;
+    padding: 0;
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+.input-area button:hover {
+    background: rgba(0, 20, 0, 0.4);
+    border-color: rgba(0, 212, 128, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transform: none;
+}
+
+#attachBtn, #sendBtn {
+    width: 52px;
+    height: 48px;
 }
 
 .chat-container {
     flex: 1;
     overflow-y: auto;
     margin-bottom: 20px;
-    border: 2px solid #00d480;
+    border: 2px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: inset 0 0 20px rgba(0, 212, 128, 0.1);
     padding: 10px;
-    background: #111;
+    border-radius: 20px;
 }
 
+/* Message styling - no colored vertical lines, full rounded corners with preserved gradient */
 .message {
     margin-bottom: 15px;
-    border-left: 2px solid #00d480;
-    padding-left: 10px;
+    background: linear-gradient(90deg, 
+        rgba(0, 212, 128, 0.03) 0%, 
+        transparent 100%);
+    border-radius: 16px;
+    padding: 8px 12px;
+    border: none;
+    border-left: none;
 }
 
 .message .meta {
-    color: #00d480;
+    color: var(--terminal-green);
     margin-bottom: 5px;
     font-size: 12px;
 }
@@ -70,60 +253,62 @@ body {
 }
 
 .message .content {
-    color: #00d480;
+    color: var(--terminal-green);
     word-wrap: break-word;
+}
+
+.message.system {
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 0, 0.03) 0%, 
+        transparent 100%);
+    border: none;
 }
 
 .message.system .meta {
     color: #ff0;
 }
 
-.message.system {
-    border-left-color: #ff0;
+/* Whisper style - subtle differentiation */
+.message.whisper {
+    background: linear-gradient(90deg, 
+        rgba(0, 212, 128, 0.06) 0%, 
+        transparent 100%);
 }
 
 .input-area {
     display: flex;
-    gap: 10px;
-    border-top: 3px solid #00d480;
-    padding-top: 20px;
+    gap: 12px;
+    border-top: none;
+    padding-top: 0;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .input-area input {
     flex: 1;
-    background: #000;
-    border: 2px solid #00d480;
-    color: #00d480;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid var(--glass-border);
+    color: var(--terminal-green);
     font-family: 'Courier New', monospace;
-    padding: 10px;
+    padding: 12px 15px;
     font-size: 14px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    transition: none;
 }
 
 .input-area input:focus {
     outline: none;
-    background: #00d480;
-    color: #000;
-}
-
-.input-area button {
-    background: #000;
-    border: 2px solid #00d480;
-    color: #00d480;
-    font-family: 'Courier New', monospace;
-    padding: 10px 20px;
-    cursor: pointer;
-    text-transform: uppercase;
-    font-weight: bold;
-}
-
-.input-area button:hover {
-    background: #00d480;
-    color: #000;
+    background: rgba(0, 212, 128, 0.1);
+    border-color: var(--terminal-green);
 }
 
 .users-list {
-    border: 2px solid #00d480;
-    padding: 10px;
+    border: 2px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 20px;
+    padding: 12px;
     margin-bottom: 20px;
     max-height: 100px;
     overflow-y: auto;
@@ -132,7 +317,13 @@ body {
 .users-list span {
     display: inline-block;
     margin-right: 15px;
-    color: #00d480;
+    color: var(--terminal-green);
+    cursor: pointer;
+    background: rgba(0, 212, 128, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    transition: none;
 }
 
 .users-list span::before {
@@ -140,41 +331,8 @@ body {
     margin-right: 5px;
 }
 
-.status {
-    color: #666;
-    font-size: 12px;
-    text-align: right;
-}
-
-.ascii {
-    color: #00d480;
-    font-size: 10px;
-    line-height: 1;
-    white-space: pre;
-}
-
-.nav {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #00d480;
-    padding-bottom: 5px;
-}
-
-.nav-item {
-    padding: 5px 10px;
-    cursor: pointer;
-    border: 1px solid transparent;
-    font-weight: bold;
-}
-
-.nav-item:hover {
-    border-color: #00d480;
-}
-
-.nav-item.active {
-    background: #00d480;
-    color: #000;
+.users-list span:hover {
+    background: rgba(0, 212, 128, 0.2);
 }
 
 .view {
@@ -193,26 +351,204 @@ body {
     line-height: 1;
     cursor: default;
     margin-left: 10px;
-    color: #00d480;
+    color: var(--terminal-green);
+}
+
+/* Glass Toggle - rounded corners */
+.glass-toggle {
+    width: 60px;
+    height: 30px;
+    border-radius: 30px;
+    background: rgba(0, 20, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 212, 128, 0.2);
+    position: relative;
+    cursor: pointer;
+    transition: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-knob {
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 1px solid rgba(0, 212, 128, 0.3);
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    transition: none;
+}
+
+.glass-toggle.active {
+    border-color: var(--terminal-green);
+    background: rgba(0, 212, 128, 0.1);
+}
+
+.glass-toggle.active .toggle-knob {
+    left: 32px;
+    background: linear-gradient(145deg, #00d480, #00b06a);
+}
+
+.toggle-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: rgba(0, 212, 128, 0.8);
+}
+
+.glass-panel {
+    background: rgba(0, 20, 0, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 212, 128, 0.2);
+    border-radius: 20px;
+}
+
+.icon-panel {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    justify-content: flex-end;
 }
 
 .attach-preview {
-    border: 2px solid #00d480;
+    border: 2px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    border-radius: 20px;
     padding: 10px;
     margin-bottom: 10px;
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    background: #111;
+    box-shadow: 0 0 20px rgba(0, 212, 128, 0.2);
 }
 
 .attach-preview img {
     max-width: 80px;
     max-height: 80px;
-    border: 1px solid #00d480;
+    border: 1px solid var(--terminal-green);
+    border-radius: 16px;
 }
 
-.attach-preview span {
+.status {
     color: #666;
     font-size: 12px;
+    text-align: right;
+    margin-top: 10px;
+}
+
+.status a {
+    color: var(--terminal-green);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--terminal-green);
+}
+
+.status a:hover {
+    text-shadow: 0 0 5px var(--terminal-green);
+}
+
+/* Custom Scrollbar - rounded corners */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 20, 0, 0.3);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 128, 0.3);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 212, 128, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 212, 128, 0.5);
+}
+
+.content a {
+    color: #8ff;
+    text-decoration: none;
+    border-bottom: 1px dashed #8ff;
+}
+
+video {
+    max-width: 100%;
+    border-radius: 16px;
+}
+
+/* Input wrapper for attach + input inline */
+.input-wrapper {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    width: 100%;
+}
+
+/* Responsive: ensure F1-F5 stay in one line on all devices */
+@media (max-width: 680px) {
+    .nav {
+        gap: 6px;
+    }
+    .nav-item {
+        font-size: 10px;
+        padding: 8px 0;
+    }
+    .input-area {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .input-wrapper {
+        flex: 1;
+        min-width: 0;
+    }
+    .icon-panel {
+        justify-content: center;
+    }
+    .glass-icon-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    #attachBtn, #sendBtn {
+        width: 48px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 550px) {
+    .nav-item {
+        font-size: 9px;
+        padding: 6px 0;
+    }
+    .nav {
+        gap: 4px;
+    }
+}
+
+/* Ensure all corners are rounded - no sharp edges anywhere */
+.container, .chat-container, .users-list, .glass-panel, .attach-preview, 
+.input-area input, .input-area button, .glass-icon-btn, .nav-item,
+.message, .glass-progress, .progress-fill {
+    border-radius: 20px;
+}
+
+.message {
+    border-radius: 16px;
+}
+
+.glass-progress, .progress-fill {
+    border-radius: 30px;
+}
+
+.glass-toggle {
+    border-radius: 30px;
 }

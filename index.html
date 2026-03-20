@@ -2,18 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHAOS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CHAOS :: GLASS TERMINAL</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
+    <!-- Background Blobs for Glass Effect -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
     <div class="container">
         <div class="header">
             <div>
-                <span>[CHAOS::TERMINAL]</span>
-                <span class="status">v0.2 // PROTO</span>
+	        <span>[CHAOS::TERMINAL]</span>
+                <span class="status"></span>
             </div>
-	    <div class="hourglass" id="hourglass">⧗</div>
+            <div class="hourglass" id="hourglass">⧗</div>
         </div>
         
         <div class="nav" id="nav">
@@ -26,25 +32,16 @@
         
         <div class="chat-container" id="chatContainer">
             <!-- Global Chat View -->
-            <div class="view active" id="view-global">
-                <!-- будут сообщения -->
-            </div>
+            <div class="view active" id="view-global"></div>
             
             <!-- Private Messages View -->
-            <div class="view" id="view-private">
-               <div class="users-list" id="privateUsersList" style="margin-bottom: 15px;"></div>
-	       <div id="privateMessages" style="height: calc(100% - 100px); overflow-y: auto;"></div>
-	    </div>
+            <div class="view" id="view-private"></div>
             
-            <!-- Feed View -->
-            <div class="view" id="view-feed">
-                <!-- будут посты -->
-            </div>
+            <!-- Feed View - NO LOADING LINE -->
+            <div class="view" id="view-feed"></div>
             
             <!-- My Void View -->
-            <div class="view" id="view-myvoid">
-                <!-- будут мои посты -->
-            </div>
+            <div class="view" id="view-myvoid"></div>
             
             <!-- Manifest View -->
             <div class="view" id="view-manifest">
@@ -61,19 +58,28 @@ MANIFESTO
                 </div>
             </div>
         </div>
-	<div class="input-area" id="inputArea">
-	    <div style="display: flex; gap: 5px; flex: 1;">
-		<input type="text" placeholder="> type your message..." id="messageInput" style="flex: 1;">
-		<button id="attachBtn" style="background: #000; border: 2px solid #00d480; color: #00d480; padding: 10px; cursor: pointer; font-family: 'Courier New', monospace;">[ATTACH]</button>
-	    </div>
-	    <button id="sendBtn">[SEND]</button>
-	</div>        
 
-	<input type="file" id="fileInput" style="display: none;" multiple>
-        
-        <div class="status" style="margin-top: 10px;">
-            ENCRYPTED :: NO LOGS :: 
+        <!-- Icon panel - all rounded -->
+        <div class="icon-panel">
+            <button class="glass-icon-btn" title="Encrypt"><i class="fa-solid fa-lock"></i></button>
+            <button class="glass-icon-btn" title="Burn after read"><i class="fa-solid fa-fire"></i></button>
+            <button class="glass-icon-btn" title="Ghost mode"><i class="fa-solid fa-ghost"></i></button>
+            <button class="glass-icon-btn" title="Broadcast"><i class="fa-solid fa-wifi"></i></button>
         </div>
+
+        <div class="input-area" id="inputArea">
+            <div class="input-wrapper">
+                <input type="text" placeholder="> type your message..." id="messageInput">
+                <button id="attachBtn"><i class="fa-solid fa-paperclip"></i></button>
+            </div>
+            <button id="sendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>        
+
+        <input type="file" id="fileInput" style="display: none;" multiple>
+        
+        <div class="status">
+            <a href="https://github.com/vifirsanova/chaos/tree/master/docs" target="_blank" rel="noopener noreferrer">ENCRYPTED</a> :: v0.3 // GLASS        
+	</div>
     </div>
 
     <script src="./js/script.js"></script>
