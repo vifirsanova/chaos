@@ -1,3 +1,4 @@
+// script.js
 const state = {
     currentView: 'global',
     currentUser: {
@@ -45,7 +46,6 @@ const views = {
     myvoid: document.getElementById('view-myvoid'),
     manifest: document.getElementById('view-manifest')
 };
-const privateUsersList = document.getElementById('privateUsersList');
 const navItems = document.querySelectorAll('.nav-item');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -53,148 +53,54 @@ const attachBtn = document.getElementById('attachBtn');
 const fileInput = document.getElementById('fileInput');
 let attachedFiles = [];
 
-function init() {
-    renderView('global');
-    
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const view = item.dataset.view;
-            switchView(view);
-        });
-    });
-    
-    sendBtn.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-    
-    initMouseNavigation();
-    
-    setInterval(spawnRandomMessage, 30000);
-    attachBtn.addEventListener('click', () => {
-	    fileInput.click();
-    });
-    fileInput.addEventListener('change', (e) => {
-	    attachedFiles = Array.from(e.target.files);
-	    showAttachPreview(); 
-    });
-}
-
-function switchView(viewName) {
-    navItems.forEach(item => item.classList.remove('active'));
-    Object.values(views).forEach(view => {
-        if (view) view.classList.remove('active');
-    });
-    
-    const activeNav = document.querySelector(`[data-view="${viewName}"]`);
-    if (activeNav) activeNav.classList.add('active');
-    
-    const activeView = views[viewName];
-    if (activeView) activeView.classList.add('active');
-    
-    state.currentView = viewName;
-    renderView(viewName);
-}
-
-function renderView(viewName) {
-    const view = views[viewName];
-    if (!view) return;
-    
-    if (viewName === 'manifest') return;
-    
-    view.innerHTML = '';
-    
-    if (viewName === 'private') {
-        const usersDiv = document.createElement('div');
-        usersDiv.className = 'users-list';
-        usersDiv.style.marginBottom = '15px';
-        
-        state.users.forEach(user => {
-            if (user !== state.currentUser.name) {
-                const span = document.createElement('span');
-                span.textContent = user;
-                span.style.cursor = 'pointer';
-                span.onclick = () => {
-                    messageInput.value = `@${user} `;
-                    messageInput.focus();
-                };
-                usersDiv.appendChild(span);
-            }
-        });
-        
-        view.appendChild(usersDiv);
-    }
-    
-    const messagesDiv = document.createElement('div');
-    messagesDiv.style.height = viewName === 'private' ? 'calc(100% - 100px)' : '100%';
-    messagesDiv.style.overflowY = 'auto';
-    
-    const messages = state.messages[viewName] || [];
-    messages.forEach(msg => {
-        messagesDiv.appendChild(createMessageElement(msg));
-    });
-    
-    view.appendChild(messagesDiv);
-    view.scrollTop = view.scrollHeight;
-}
-
 function getColorFromString(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
     const hue = 120 + (hash % 60);
-    const sat = 70 + (hash % 30);   
-    const light = 40 + (hash % 20); 
+    const sat = 70 + (hash % 30);
+    const light = 40 + (hash % 20);
     return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
 function createMessageElement(msg) {
     const div = document.createElement('div');
     div.className = 'message';
-
-    const userColor = msg.user === 'SYSTEM' ? '#ff0' : getColorFromString(msg.user);
-    div.style.borderLeftColor = userColor;
-
+    
+    if (msg.type === 'whisper') div.classList.add('whisper');
     if (msg.type === 'system') div.classList.add('system');
-    else if (msg.type === 'whisper') div.classList.add('whisper');
-    else if (msg.type === 'feed') div.classList.add('feed');
     
     let username = msg.user;
     if (msg.type === 'feed') username = '>' + username;
     else if (msg.type === 'whisper') username = '*' + username;
     
     let contentHtml = msg.text;
-
     contentHtml = contentHtml.replace(/\[IMG:([^\]]+)\]/g, (match, filename) => {
-
         const cleanFilename = filename.trim();
         return `<img src="assets/images/${cleanFilename}" 
-            style="max-width: 200px; max-height: 150px; border: 1px solid #00d480; margin: 5px 0;" 
+            style="max-width: 200px; max-height: 150px; border: 1px solid #00d480; border-radius: 16px; margin: 5px 0;" 
             onerror="this.onerror=null; this.src='https://i.imgur.com/${cleanFilename}';"
             >`;
     });
-
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     contentHtml = contentHtml.replace(urlRegex, url => {
-	    if (url.match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i)) {
-
+        if (url.match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i)) {
             const filename = url.split('/').pop();
             return `<img src="assets/images/${filename}" 
-                style="max-width: 200px; max-height: 150px; border: 1px solid #00d480; margin: 5px 0;" 
+                style="max-width: 200px; max-height: 150px; border-radius: 16px; border: 1px solid #00d480; margin: 5px 0;" 
                 onerror="this.onerror=null; this.src='${url}';"
                 alt="${filename}">`;
         }
-
-	    else if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
-	    return `<video controls style="max-width: 300px; max-height: 200px; border: 1px solid #00d480;">
-            <source src="${url}" type="video/${url.split('.').pop()}">
-        </video>`;
-	    }
-	    else {
-		    return `<a href="${url}" target="_blank" style="color:#8ff"link/>[LINK]</a>`;
-	    }
-	    });
+        else if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+            return `<video controls style="max-width: 300px; max-height: 200px; border-radius: 16px; border: 1px solid #00d480;">
+                <source src="${url}" type="video/${url.split('.').pop()}">
+            </video>`;
+        }
+        else {
+            return `<a href="${url}" target="_blank" style="color:#8ff" rel="noopener noreferrer">[LINK]</a>`;
+        }
+    });
     div.innerHTML = `
         <div class="meta">
             ${username} <span class="time">${msg.time}</span>
@@ -203,20 +109,80 @@ function createMessageElement(msg) {
             ${contentHtml}
         </div>
     `;
-    
     return div;
 }
 
-function showAttachPreview() {
+function renderView(viewName) {
+    const view = views[viewName];
+    if (!view) return;
+    if (viewName === 'manifest') return;
+    
+    if (viewName === 'feed') {
+        view.innerHTML = '';
+    } else if (viewName === 'myvoid') {
+        const configPanel = view.querySelector('.glass-panel');
+        view.innerHTML = '';
+        if (configPanel) view.appendChild(configPanel);
+        else {
+            const panel = document.createElement('div');
+            panel.className = 'glass-panel';
+            panel.style.padding = '15px';
+            panel.style.marginBottom = '20px';
+            panel.innerHTML = `<div style="display: flex; gap: 20px; justify-content: space-around;">
+                <div class="toggle-label"><div class="glass-toggle active" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div><span>ENCRYPT</span></div>
+                <div class="toggle-label"><div class="glass-toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div><span>GHOST</span></div>
+                <div class="toggle-label"><div class="glass-toggle" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></div><span>AUTODEL</span></div>
+            </div>`;
+            view.appendChild(panel);
+        }
+    } else {
+        view.innerHTML = '';
+    }
+    
+    if (viewName === 'private') {
+        const usersDiv = document.createElement('div');
+        usersDiv.className = 'users-list';
+        state.users.forEach(user => {
+            if (user !== state.currentUser.name) {
+                const span = document.createElement('span');
+                span.textContent = user;
+                span.onclick = () => {
+                    messageInput.value = `@${user} `;
+                    messageInput.focus();
+                };
+                usersDiv.appendChild(span);
+            }
+        });
+        view.appendChild(usersDiv);
+    }
+    
+    const messagesDiv = document.createElement('div');
+    messagesDiv.style.height = viewName === 'private' ? 'calc(100% - 100px)' : '100%';
+    messagesDiv.style.overflowY = 'auto';
+    const messages = state.messages[viewName] || [];
+    messages.forEach(msg => {
+        messagesDiv.appendChild(createMessageElement(msg));
+    });
+    view.appendChild(messagesDiv);
+    view.scrollTop = view.scrollHeight;
+}
 
+function switchView(viewName) {
+    navItems.forEach(item => item.classList.remove('active'));
+    Object.values(views).forEach(v => { if(v) v.classList.remove('active'); });
+    const activeNav = document.querySelector(`[data-view="${viewName}"]`);
+    if (activeNav) activeNav.classList.add('active');
+    if (views[viewName]) views[viewName].classList.add('active');
+    state.currentView = viewName;
+    renderView(viewName);
+}
+
+function showAttachPreview() {
     const oldPreview = document.querySelector('.attach-preview');
     if (oldPreview) oldPreview.remove();
-
     if (attachedFiles.length === 0) return;
-
     const preview = document.createElement('div');
     preview.className = 'attach-preview';
-
     attachedFiles.forEach(file => {
         if (file.type.startsWith('image/')) {
             const img = document.createElement('img');
@@ -229,18 +195,16 @@ function showAttachPreview() {
             preview.appendChild(span);
         }
     });
-
     const inputArea = document.getElementById('inputArea');
     inputArea.parentNode.insertBefore(preview, inputArea);
 }
 
 function sendMessage() {
-    const text = messageInput.value.trim();
+    let text = messageInput.value.trim();
     if (attachedFiles.length > 0) {
         attachedFiles.forEach(file => {
             const fileMsg = `[FILE: ${file.name}] (${(file.size/1024).toFixed(1)}KB)`;
             text = text ? text + ' ' + fileMsg : fileMsg;
-            
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -248,7 +212,7 @@ function sendMessage() {
                         const imgMsg = {
                             id: Date.now(),
                             user: state.currentUser.name,
-                            text: `[IMG: ${e.target.result}]`,
+                            text: `[IMG: ${file.name}]`,
                             type: 'chat',
                             time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
                         };
@@ -259,43 +223,34 @@ function sendMessage() {
                 reader.readAsDataURL(file);
             }
         });
-        
         attachedFiles = [];
         fileInput.value = '';
         const preview = document.querySelector('.attach-preview');
         if (preview) preview.remove();
     }
-    
     if (!text) return;
     const now = new Date();
-    const time = now.toLocaleTimeString('ru-RU', { 
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
-    });
-    
+    const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     let type = 'chat';
     let user = state.currentUser.name;
-    
+    let displayText = text;
     if (text.startsWith('> ')) {
         type = 'feed';
-        text = text.substring(2);
-        user = '>' + user;
+        displayText = text.substring(2);
     } else if (text.startsWith('@')) {
         const match = text.match(/^@(\w+)\s+(.+)$/);
         if (match) {
             type = 'whisper';
-            text = match[2];
-            user = '*' + user + '→' + match[1];
+            displayText = match[2];
         }
     }
-    
     const newMsg = {
         id: Date.now(),
-        user: user.replace('>', '').replace(/\*.*/, '') || state.currentUser.name,
-        text: text,
+        user: user,
+        text: displayText,
         type: type === 'chat' ? 'chat' : type,
         time: time
     };
-    
     if (type === 'feed') {
         state.messages.feed.push(newMsg);
         if (state.currentView === 'feed') renderView('feed');
@@ -306,51 +261,23 @@ function sendMessage() {
         state.messages.global.push(newMsg);
         if (state.currentView === 'global') renderView('global');
     }
-    
     messageInput.value = '';
 }
 
 function spawnRandomMessage() {
-    if (Math.random() > 0.5) return; // 50% шанс
-    
+    if (Math.random() > 0.5) return;
     const users = state.users.filter(u => u !== state.currentUser.name);
     if (users.length === 0) return;
-    
     const randomUser = users[Math.floor(Math.random() * users.length)];
-    const messages = [
-        '...',
-        'ни о чем',
-        'кто здесь',
-        'получен сигнал',
-        'я тебя вижу',
-        '⧗',
-        '/dev/null',
-        '42',
-        'error: core dumped'
-    ];
-    
-    const now = new Date();
-    const time = now.toLocaleTimeString('ru-RU', { 
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
-    });
-    
-    const newMsg = {
-        id: Date.now(),
-        user: randomUser,
-        text: messages[Math.floor(Math.random() * messages.length)],
-        type: 'chat',
-        time: time
-    };
-    
+    const messages = ['...', 'ни о чем', 'кто здесь', 'получен сигнал', 'я тебя вижу', '⧗', '/dev/null', '42', 'error: core dumped'];
+    const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const newMsg = { id: Date.now(), user: randomUser, text: messages[Math.floor(Math.random() * messages.length)], type: 'chat', time: time };
     state.messages.global.push(newMsg);
-    if (state.currentView === 'global') {
-        renderView('global');
-    }
+    if (state.currentView === 'global') renderView('global');
 }
 
 function initMouseNavigation() {
     const viewOrder = ['global', 'private', 'feed', 'myvoid', 'manifest'];
-    
     window.addEventListener('mouseup', function(e) {
         if (e.button === 3 || e.which === 3) {
             e.preventDefault();
@@ -366,10 +293,29 @@ function initMouseNavigation() {
             switchView(viewOrder[newIndex]);
         }
     });
-    
-    window.addEventListener('auxclick', function(e) {
-        if (e.button === 3 || e.button === 4) e.preventDefault();
+    window.addEventListener('auxclick', function(e) { if (e.button === 3 || e.button === 4) e.preventDefault(); });
+}
+
+window.toggleSwitch = function(element) {
+    element.classList.toggle('active');
+    const label = element.closest('.toggle-label')?.querySelector('span')?.textContent;
+    if (label) console.log(`[TOGGLE] ${label}: ${element.classList.contains('active') ? 'ON' : 'OFF'}`);
+};
+
+function init() {
+    renderView('global');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => switchView(item.dataset.view));
     });
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    attachBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        attachedFiles = Array.from(e.target.files);
+        showAttachPreview();
+    });
+    initMouseNavigation();
+    setInterval(spawnRandomMessage, 30000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
