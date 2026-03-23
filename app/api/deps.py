@@ -36,6 +36,20 @@ async def get_current_user(
     
     return user
 
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db),
+    pubkey: Optional[str] = Depends(api_key_header),
+) -> Optional[User]:
+    """Get current user from pubkey header, returns None if not found."""
+    if not pubkey:
+        return None
+    
+    result = await db.execute(
+        select(User).where(User.pubkey == pubkey)
+    )
+    user = result.scalar_one_or_none()
+    
+    return user
 
 async def get_message_repo(
     db: AsyncSession = Depends(get_db),
