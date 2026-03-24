@@ -1,6 +1,6 @@
-// script.js - Fixed Authentication Flow
+// script.js - Fixed with Auto User Creation
 
-const API_BASE = ''; // Your API port
+const API_BASE = window.location.origin; // Use same origin as the page
 let currentUser = null;
 
 const state = {
@@ -51,8 +51,9 @@ async function apiRequest(endpoint, options = {}) {
     };
     
     // Add user pubkey if we have one and it's not a public endpoint
-    const isPublicEndpoint = endpoint.startsWith('/users/') && 
-        (endpoint.includes('/by-pubkey/') || endpoint.includes('/search'));
+    const isPublicEndpoint = endpoint === '/users/' || 
+        endpoint.startsWith('/users/by-pubkey/') ||
+        endpoint === '/users/search';
     
     if (currentUser && currentUser.pubkey && !isPublicEndpoint) {
         headers['X-User-Pubkey'] = currentUser.pubkey;
@@ -93,79 +94,119 @@ async function createOrGetUser() {
         console.log('Using existing pubkey:', pubkey.slice(0, 16) + '...');
     }
     
+    // Try to get user by pubkey
+    console.log('Checking if user exists...');
+    let userExists = false;
+    
     try {
-        // First, try to get user by pubkey (public endpoint)
-        console.log('Checking if user exists...');
         const existingUser = await apiRequest(`/users/by-pubkey/${pubkey}`);
-        
         // User exists!
         currentUser = {
             id: existingUser.id,
             pubkey: existingUser.pubkey,
             name: existingUser.username || username
         };
-        
-        console.log('Found existing user:', currentUser.name);
-        
-        // Update last seen (needs auth)
-        try {
-            await fetch(`${API_BASE}/users/me`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-Pubkey': pubkey
-                },
-                body: JSON.stringify({ username: currentUser.name })
-            });
-        } catch (e) {
-            console.log('Last seen update failed (non-critical):', e);
-        }
-        
+        console.log('Found existing user:', currentUser.name, '(ID:', currentUser.id, ')');
+        userExists = true;
     } catch (error) {
-        // User doesn't exist, create new one
+        // User doesn't exist (404) or other error
         if (error.message.includes('404')) {
-            console.log('User not found, creating new user...');
-            try {
-                const newUser = await apiRequest('/users/', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        pubkey: pubkey,
-                        username: username
-                    })
-                });
-                
-                currentUser = {
-                    id: newUser.id,
-                    pubkey: newUser.pubkey,
-                    name: newUser.username || username
-                };
-                
-                console.log('Created new user:', currentUser.name);
-                localStorage.setItem('chaos_username', currentUser.name);
-                
-            } catch (createError) {
-                console.error('Failed to create user:', createError);
+            console.log('User not found, will create new user...');
+        } else {
+            console.error('Error checking user existence:', error);
+        }
+    }
+    
+    // If user doesn't exist, create new one
+    if (!userExists) {
+        try {
+            console.log('Creating new user with pubkey:', pubkey.slice(0, 16) + '...');
+            const newUser = await apiRequest('/users/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    pubkey: pubkey,
+                    username: username
+                })
+            });
+            
+            currentUser = {
+                id: newUser.id,
+                pubkey: newUser.pubkey,
+                name: newUser.username || username
+            };
+            
+            console.log('Created new user:', currentUser.name, '(ID:', currentUser.id, ')');
+            localStorage.setItem('chaos_username', currentUser.name);
+            
+        } catch (createError) {
+            console.error('Failed to create user:', createError);
+            
+            // If creation fails with 409 (conflict), try to fetch again
+            if (createError.message.includes('409') || createError.message.includes('already exists')) {
+                console.log('User was created by another request, fetching again...');
+                try {
+                    const existingUser = await apiRequest(`/users/by-pubkey/${pubkey}`);
+                    currentUser = {
+                        id: existingUser.id,
+                        pubkey: existingUser.pubkey,
+                        name: existingUser.username || username
+                    };
+                    console.log('Found existing user after conflict:', currentUser.name);
+                } catch (fetchError) {
+                    console.error('Still cannot find user:', fetchError);
+                    throw fetchError;
+                }
+            } else {
                 throw createError;
             }
-        } else {
-            console.error('Failed to check user existence:', error);
-            throw error;
         }
+    }
+    
+    // Update last seen (non-critical, ignore errors)
+    try {
+        await fetch(`${API_BASE}/users/me`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-Pubkey': currentUser.pubkey
+            },
+            body: JSON.stringify({ username: currentUser.name })
+        });
+    } catch (e) {
+        console.log('Last seen update failed (non-critical):', e);
     }
     
     updateStatusBar();
 }
 
 function generatePubkey() {
-    // Simple pubkey generation (in production, use proper crypto)
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+    // Generate a deterministic pubkey based on random + timestamp
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString();
+    const combined = timestamp + random + navigator.userAgent;
+    
+    // Simple hash function
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+        const char = combined.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    // Convert to hex string
+    const hexHash = Math.abs(hash).toString(16).padStart(32, '0');
+    
+    // Add some random bytes at the end
+    const randomBytes = new Uint8Array(16);
+    crypto.getRandomValues(randomBytes);
+    const randomHex = Array.from(randomBytes, b => b.toString(16).padStart(2, '0')).join('');
+    
+    return hexHash + randomHex.slice(0, 32);
 }
 
 function generateRandomUsername() {
-    const prefixes = ['VOID', 'ECHO', 'STATIC', 'PIXEL', 'NOISE', 'WAVE', 'GHOST', 'SHADOW'];
-    const suffix = Math.floor(Math.random() * 1000);
+    const prefixes = ['VOID', 'ECHO', 'STATIC', 'PIXEL', 'NOISE', 'WAVE', 'GHOST', 'SHADOW', 'RADIO', 'SIGNAL'];
+    const suffix = Math.floor(Math.random() * 10000);
     return `${prefixes[Math.floor(Math.random() * prefixes.length)]}_${suffix}`;
 }
 
@@ -185,9 +226,6 @@ async function initializeChains() {
     if (!currentUser) return;
     
     console.log('Initializing chains for user:', currentUser.id);
-    
-    // Set the pubkey for future requests
-    window.currentUserPubkey = currentUser.pubkey;
     
     // Get or create global chain
     try {
@@ -290,7 +328,7 @@ async function loadContacts() {
         
         // Update users list for private chat
         state.users = contacts.map(c => c.contact.username);
-        console.log('Loaded contacts:', state.users);
+        console.log('Loaded contacts:', state.users.length);
         
         // Create private chains for each contact
         for (const contact of contacts) {
@@ -395,17 +433,6 @@ function formatTime(isoString) {
 
 // ============= UI RENDERING =============
 
-function getColorFromString(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = 120 + (hash % 60);
-    const sat = 70 + (hash % 30);
-    const light = 40 + (hash % 20);
-    return `hsl(${hue}, ${sat}%, ${light}%)`;
-}
-
 function createMessageElement(msg) {
     const div = document.createElement('div');
     div.className = 'message';
@@ -471,16 +498,23 @@ function renderView(viewName) {
     if (viewName === 'private') {
         const usersDiv = document.createElement('div');
         usersDiv.className = 'users-list';
-        state.users.forEach(user => {
-            const span = document.createElement('span');
-            span.textContent = user;
-            span.onclick = () => {
-                messageInput.value = `@${user} `;
-                messageInput.focus();
-            };
-            usersDiv.appendChild(span);
-        });
-        view.appendChild(usersDiv);
+        if (state.users.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.className = 'message system';
+            emptyMsg.innerHTML = '<div class="content">* No contacts yet. Add contacts from global chat to start private messages.</div>';
+            view.appendChild(emptyMsg);
+        } else {
+            state.users.forEach(user => {
+                const span = document.createElement('span');
+                span.textContent = user;
+                span.onclick = () => {
+                    messageInput.value = `@${user} `;
+                    messageInput.focus();
+                };
+                usersDiv.appendChild(span);
+            });
+            view.appendChild(usersDiv);
+        }
     }
     
     const messagesDiv = document.createElement('div');
@@ -488,9 +522,16 @@ function renderView(viewName) {
     messagesDiv.style.overflowY = 'auto';
     
     const messages = state.messages[viewName] || [];
-    messages.forEach(msg => {
-        messagesDiv.appendChild(createMessageElement(msg));
-    });
+    if (messages.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'message system';
+        emptyMsg.innerHTML = '<div class="content">* No messages yet. Be the first to speak.</div>';
+        messagesDiv.appendChild(emptyMsg);
+    } else {
+        messages.forEach(msg => {
+            messagesDiv.appendChild(createMessageElement(msg));
+        });
+    }
     
     view.appendChild(messagesDiv);
     
@@ -549,6 +590,15 @@ async function sendMessage() {
             if (contact) {
                 const chainKey = [currentUser.id, contact.contact_id].sort().join('-');
                 targetChainId = state.chains.private[chainKey]?.id;
+            } else {
+                // Show error for non-contact
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'message system';
+                errorMsg.innerHTML = `<div class="content" style="color: #ff4444;">* ${recipient} is not in your contacts. Add them first by messaging in global chat.</div>`;
+                const container = document.getElementById(`view-${state.currentView}`);
+                if (container) container.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+                return;
             }
         }
     }
@@ -567,7 +617,7 @@ async function sendMessage() {
     // Get last message hash for prev_hash
     let prevHash = null;
     const messages = state.messages[type === 'private' ? 'private' : type];
-    if (messages.length > 0) {
+    if (messages.length > 0 && messages[messages.length - 1].hash) {
         prevHash = messages[messages.length - 1].hash;
     }
     

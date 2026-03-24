@@ -17,8 +17,9 @@ from app.api.schemas import (
 from app.api.deps import get_current_user, get_message_repo
 from app.repositories.message_repository import MessageRepository
 
-router = APIRouter(prefix="/messages", tags=["messages"])
+from sqlalchemy.orm import selectinload
 
+router = APIRouter(prefix="/messages", tags=["messages"])
 
 @router.get("/chains/{chain_id}", response_model=List[MessageResponse])
 async def get_chain_messages(
@@ -47,8 +48,10 @@ async def get_chain_messages(
                 detail="Access denied to private chain",
             )
     
+    # Eager load the sender relationship
     result = await db.execute(
         select(Message)
+        .options(selectinload(Message.sender))  # This loads the sender
         .where(
             Message.chain_id == chain_id,
             Message.is_deleted == False,
@@ -58,8 +61,10 @@ async def get_chain_messages(
         .offset(offset)
     )
     
-    return result.scalars().all()
-
+    messages = result.scalars().all()
+    
+    # Convert to response models (sender will be included)
+    return messages
 
 @router.get("/chains/{chain_id}/messages/{message_id}", response_model=MessageWithAttachments)
 async def get_message(
@@ -86,8 +91,13 @@ async def get_message(
                 detail="Access denied",
             )
     
+    # Eager load sender and attachments
     result = await db.execute(
         select(Message)
+        .options(
+            selectinload(Message.sender),
+            selectinload(Message.attachments)
+        )
         .where(
             Message.chain_id == chain_id,
             Message.id == message_id,
@@ -102,17 +112,10 @@ async def get_message(
             detail="Message not found",
         )
     
-    # Load attachments
-    result = await db.execute(
-        select(Attachment).where(Attachment.message_id == message.id)
-    )
-    attachments = result.scalars().all()
-    
     return MessageWithAttachments(
         **message.__dict__,
-        attachments=attachments,
+        attachments=message.attachments,
     )
-
 
 @router.post("/chains/{chain_id}", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 async def create_message(

@@ -57,20 +57,19 @@ class MessageBase(BaseModel):
 class MessageCreate(MessageBase):
     prev_hash: Optional[str] = None
 
-
 class MessageResponse(MessageBase):
     id: int
     hash: str
     prev_hash: Optional[str] = None
     chain_id: int
     sender_id: int
+    sender: Optional[UserResponse] = None  # Add this field
     created_at: datetime
     block_height: int
     is_deleted: bool
 
     class Config:
         from_attributes = True
-
 
 class MessageWithAttachments(MessageResponse):
     attachments: List["AttachmentResponse"] = []
