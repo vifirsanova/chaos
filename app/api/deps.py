@@ -56,3 +56,22 @@ async def get_message_repo(
 ) -> MessageRepository:
     """Get message repository instance."""
     return MessageRepository(db)
+
+
+async def get_current_user_websocket(
+    pubkey: str,
+    db: AsyncSession,  # Remove Depends, pass db explicitly
+) -> User:
+    """Get current user from pubkey for WebSocket connections."""
+    result = await db.execute(
+        select(User).where(User.pubkey == pubkey)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with pubkey {pubkey} not found",
+        )
+
+    return user

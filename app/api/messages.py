@@ -7,7 +7,7 @@ import os
 import shutil
 import hashlib
 from datetime import datetime, timezone
-
+from app.api.websocket import manager
 from app.database import get_db
 from app.models import User, Chain, Message, Attachment
 from app.api.schemas import (
@@ -183,8 +183,30 @@ async def create_message(
         )
     
     await repo.session.commit()
-    return message
+    await repo.session.refresh(message)  # FIXED: Use repo.session instead of db
 
+    # Broadcast to WebSocket connections
+    await manager.send_to_chain(chain_id, {
+        "type": "new_message",
+        "chain_id": chain_id,
+        "message": {
+            "id": message.id,
+            "hash": message.hash,
+            "content": message.content,
+            "sender_id": message.sender_id,
+            "sender": {
+                "id": current_user.id,
+                "username": current_user.username,
+                "pubkey": current_user.pubkey
+            } if current_user else None,
+            "created_at": message.created_at.isoformat(),
+            "block_height": message.block_height,
+            "signature": message.signature,
+            "prev_hash": message.prev_hash
+        }
+    })
+
+    return message
 
 @router.post("/chains/{chain_id}/with-attachments", response_model=MessageResponse)
 async def create_message_with_attachments(
@@ -193,7 +215,7 @@ async def create_message_with_attachments(
     signature: str = Form(...),
     prev_hash: Optional[str] = Form(None),
     files: List[UploadFile] = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),  # db is defined here
     current_user: User = Depends(get_current_user),
 ):
     """Create a message with file attachments."""
@@ -283,6 +305,27 @@ async def create_message_with_attachments(
     
     await db.commit()
     await db.refresh(message)
+
+    # Broadcast to WebSocket connections
+    await manager.send_to_chain(chain_id, {
+        "type": "new_message",
+        "chain_id": chain_id,
+        "message": {
+            "id": message.id,
+            "hash": message.hash,
+            "content": message.content,
+            "sender_id": message.sender_id,
+            "sender": {
+                "id": current_user.id,
+                "username": current_user.username,
+                "pubkey": current_user.pubkey
+            } if current_user else None,
+            "created_at": message.created_at.isoformat(),
+            "block_height": message.block_height,
+            "signature": message.signature,
+            "prev_hash": message.prev_hash
+        }
+    })
     
     return message
 

@@ -6,3 +6,6 @@ pytest>=8.0.0
 pytest-asyncio>=0.23.0
 pytest-env>=1.0.0
 python-multipart
+websockets
+fastapi
+uvicorn[standard]

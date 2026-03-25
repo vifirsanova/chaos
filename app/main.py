@@ -3,8 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
-
-from app.api import users, chains, messages, validation, attachments
+from app.api import users, chains, messages, validation, attachments, websocket
 
 app = FastAPI(
     title="Chaos Messenger API",
@@ -32,7 +31,7 @@ app.include_router(chains.router)
 app.include_router(messages.router)
 app.include_router(validation.router)
 app.include_router(attachments.router)
-
+app.include_router(websocket.router)
 
 @app.get("/")
 async def root():
