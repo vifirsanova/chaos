@@ -2,7 +2,7 @@
 
 P2P mesh messenger with glass terminal UI
 
-![](screen.jpg)
+![screen.png]
 
 ## Structure
 
@@ -53,4 +53,8 @@ psql -U postgres -f db/genesis.sql
 | GET | `/validation/chains/{id}/valid` | Quick validity check |
 | GET | `/attachments/{id}` | Download attachment |
 
-> hopefully I will do it. or die young and beautiful
+---
+
+UPD: changed polling (such a shame) to webSocket support (yay, like a normal messenger) 
+
+
