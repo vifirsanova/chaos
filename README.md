@@ -1,6 +1,11 @@
 # chaos
 
-P2P mesh messenger with glass terminal UI
+Tor messenger with glass terminal UI
+
+**UPD, April 28, 2026**: private chats are finally here
+
+![private chat example](assets/images/pr1.jpg')
+![private chat example](assets/images/pr2.jpg')
 
 ![sample screen](screen.png)
 
@@ -28,6 +33,13 @@ psql -U postgres -f db/genesis.sql
 ./run.sh
 ```
 
+## Features
+
+- Uses WebSocket
+- Tested on Tor
+- Multi-user functionality works well even on constrained environment
+- Supports both public and private chats 
+
 ## API Endpoints Summary
 
 | Method | Endpoint | Description |
@@ -52,9 +64,4 @@ psql -U postgres -f db/genesis.sql
 | GET | `/validation/chains/{id}/invalid` | Get invalid messages |
 | GET | `/validation/chains/{id}/valid` | Quick validity check |
 | GET | `/attachments/{id}` | Download attachment |
-
----
-
-UPD: changed polling (such a shame) to webSocket support (yay, like a normal messenger) 
-
 
