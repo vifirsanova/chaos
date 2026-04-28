@@ -7,6 +7,67 @@
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./css/styles.css">
+    <style>
+        .contact-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .contact-action-btn {
+            background: rgba(0, 20, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 212, 128, 0.3);
+            border-radius: 20px;
+            color: #00d480;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: none;
+        }
+        .contact-action-btn:hover {
+            background: rgba(0, 212, 128, 0.1);
+            border-color: #00d480;
+        }
+        .contact-action-btn i {
+            font-size: 12px;
+        }
+        /* Стили для списка контактов в приватном режиме */
+        .private-contacts-header {
+            border-bottom: 1px solid rgba(0, 212, 128, 0.3);
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .contacts-list-compact {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .contact-chip {
+            background: rgba(0, 20, 0, 0.4);
+            border: 1px solid rgba(0, 212, 128, 0.3);
+            border-radius: 20px;
+            color: #00d480;
+            padding: 4px 12px;
+            font-size: 11px;
+            cursor: pointer;
+            font-family: monospace;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .contact-chip:hover {
+            background: rgba(0, 212, 128, 0.1);
+        }
+        .contact-chip i {
+            font-size: 9px;
+        }
+    </style>
 </head>
 <body>
     <!-- Background Blobs for Glass Effect -->
@@ -16,7 +77,7 @@
     <div class="container">
         <div class="header">
             <div>
-	        <span>[CHAOS::TERMINAL]</span>
+                <span>[CHAOS::TERMINAL]</span>
                 <span class="status"></span>
             </div>
             <div class="hourglass" id="hourglass">⧗</div>
@@ -34,10 +95,24 @@
             <!-- Global Chat View -->
             <div class="view active" id="view-global"></div>
             
-            <!-- Private Messages View -->
-            <div class="view" id="view-private"></div>
+            <!-- Private Messages View - enhanced with contact management -->
+            <div class="view" id="view-private">
+                <div class="private-chats-header">
+                    <div class="contact-actions">
+                        <button class="contact-action-btn" id="addContactBtnGlobal" title="Add new contact">
+                            <i class="fa-solid fa-user-plus"></i> ADD CONTACT
+                        </button>
+                        <button class="contact-action-btn" id="newPrivateChatBtnGlobal" title="Start new private chat">
+                            <i class="fa-solid fa-comment"></i> NEW CHAT
+                        </button>
+                    </div>
+                    <div class="chats-list" id="privateChatsListArea"></div>
+                    <div class="contacts-list-compact" id="compactContactsList"></div>
+                </div>
+                <div class="private-messages-container" id="private-messages-container"></div>
+            </div>
             
-            <!-- Feed View - NO LOADING LINE -->
+            <!-- Feed View -->
             <div class="view" id="view-feed"></div>
             
             <!-- My Void View -->
@@ -59,7 +134,6 @@ MANIFESTO
             </div>
         </div>
 
-        <!-- Icon panel - all rounded -->
         <div class="icon-panel">
             <button class="glass-icon-btn" title="Encrypt"><i class="fa-solid fa-lock"></i></button>
             <button class="glass-icon-btn" title="Burn after read"><i class="fa-solid fa-fire"></i></button>
@@ -79,9 +153,402 @@ MANIFESTO
         
         <div class="status">
             <a href="https://github.com/vifirsanova/chaos/tree/master/docs" target="_blank" rel="noopener noreferrer">ENCRYPTED</a> :: v0.3 // GLASS        
-	</div>
+        </div>
     </div>
 
+    <script>
+        (function() {
+            document.addEventListener('DOMContentLoaded', function() {
+                function injectGlobalContactButtons() {
+                    const globalView = document.getElementById('view-global');
+                    if (!globalView) return;
+                    
+                    if (globalView.querySelector('.global-contact-bar')) return;
+                    
+                    const contactBar = document.createElement('div');
+                    contactBar.className = 'contact-actions';
+                    contactBar.style.marginBottom = '15px';
+                    contactBar.style.padding = '0 5px';
+                    contactBar.innerHTML = `
+                        <button class="contact-action-btn" id="addContactBtnGlobalChat" style="background: rgba(0, 20, 0, 0.4);">
+                            <i class="fa-solid fa-user-plus"></i> ADD CONTACT
+                        </button>
+                        <button class="contact-action-btn" id="newChatBtnGlobalChat" style="background: rgba(0, 20, 0, 0.4);">
+                            <i class="fa-solid fa-message"></i> NEW PRIVATE CHAT
+                        </button>
+                    `;
+                    
+                    if (globalView.firstChild) {
+                        globalView.insertBefore(contactBar, globalView.firstChild);
+                    } else {
+                        globalView.appendChild(contactBar);
+                    }
+                    
+                    const addBtn = document.getElementById('addContactBtnGlobalChat');
+                    const newChatBtn = document.getElementById('newChatBtnGlobalChat');
+                    
+                    if (addBtn) {
+                        addBtn.addEventListener('click', function() {
+                            if (typeof showAddContactModal === 'function') {
+                                showAddContactModal();
+                            } else {
+                                showFallbackAddContactModal();
+                            }
+                        });
+                    }
+                    
+                    if (newChatBtn) {
+                        newChatBtn.addEventListener('click', function() {
+                            if (typeof showNewChatDialog === 'function') {
+                                showNewChatDialog();
+                            } else {
+                                showFallbackNewChatModal();
+                            }
+                        });
+                    }
+                }
+                
+                function showFallbackAddContactModal() {
+                    if (document.querySelector('.modal-overlay-custom')) return;
+                    
+                    const modal = document.createElement('div');
+                    modal.className = 'modal-overlay-custom';
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0, 0, 0, 0.85);
+                        backdrop-filter: blur(12px);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <div style="background: rgba(0, 20, 0, 0.95); border: 2px solid rgba(0, 212, 128, 0.4); border-radius: 24px; padding: 25px; width: 450px; max-width: 90%;">
+                            <h3 style="margin-bottom: 20px; color: #00d480; text-align: center;">ADD CONTACT</h3>
+                            <input type="text" id="contactSearchInput" placeholder="Username or pubkey..." style="width: 100%; padding: 12px; background: rgba(0,0,0,0.6); border: 1px solid #00d480; border-radius: 20px; color: #00d480; margin-bottom: 20px;">
+                            <div id="contactSearchResults" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;"></div>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="cancelContactBtn" style="flex: 1; padding: 10px; background: rgba(0,20,0,0.6); border: 1px solid #ff4444; border-radius: 20px; color: #ff4444; cursor: pointer;">CANCEL</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    
+                    const searchInput = modal.querySelector('#contactSearchInput');
+                    const resultsDiv = modal.querySelector('#contactSearchResults');
+                    let searchTimeout;
+                    
+                    searchInput.addEventListener('input', async (e) => {
+                        clearTimeout(searchTimeout);
+                        const query = e.target.value.trim();
+                        if (query.length < 2) {
+                            resultsDiv.innerHTML = '<div style="color:#666; text-align:center;">* Type at least 2 characters...</div>';
+                            return;
+                        }
+                        
+                        searchTimeout = setTimeout(async () => {
+                            try {
+                                const API_BASE = window.location.origin;
+                                const currentUserPubkey = localStorage.getItem('chaos_pubkey');
+                                const headers = { 'Content-Type': 'application/json' };
+                                if (currentUserPubkey) headers['X-User-Pubkey'] = currentUserPubkey;
+                                
+                                const response = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`, { headers });
+                                if (!response.ok) throw new Error('Search failed');
+                                const users = await response.json();
+                                const filtered = users.filter(u => u.pubkey !== currentUserPubkey);
+                                
+                                if (filtered.length === 0) {
+                                    resultsDiv.innerHTML = '<div style="color:#666; text-align:center;">* No users found.</div>';
+                                    return;
+                                }
+                                
+                                resultsDiv.innerHTML = filtered.map(user => `
+                                    <div style="padding: 12px; margin: 8px 0; background: rgba(0,212,128,0.08); border-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                        <div><strong style="color:#00d480;">${escapeHtml(user.username || 'Anonymous')}</strong><br><small style="color:#666;">${user.pubkey.slice(0, 16)}...</small></div>
+                                        <button class="add-contact-confirm" data-pubkey="${user.pubkey}" data-username="${escapeHtml(user.username)}" style="background: rgba(0,212,128,0.2); border: 1px solid #00d480; border-radius: 20px; padding: 5px 15px; cursor: pointer; color: #00d480;">ADD</button>
+                                    </div>
+                                `).join('');
+                                
+                                resultsDiv.querySelectorAll('.add-contact-confirm').forEach(btn => {
+                                    btn.addEventListener('click', async () => {
+                                        const pubkey = btn.dataset.pubkey;
+                                        try {
+                                            const API_BASE = window.location.origin;
+                                            const currentPubkey = localStorage.getItem('chaos_pubkey');
+                                            const response = await fetch(`${API_BASE}/users/me/contacts`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-User-Pubkey': currentPubkey
+                                                },
+                                                body: JSON.stringify({ contact_pubkey: pubkey })
+                                            });
+                                            if (response.ok) {
+                                                modal.remove();
+                                                if (typeof loadContacts === 'function') {
+                                                    await loadContacts();
+                                                }
+                                                if (typeof renderView === 'function' && window.state?.currentView === 'global') {
+                                                    renderView('global');
+                                                }
+                                                if (typeof renderPrivateChatsList === 'function') {
+                                                    renderPrivateChatsList();
+                                                }
+                                                updateCompactContactsList();
+                                            } else {
+                                                alert('Failed to add contact');
+                                            }
+                                        } catch (err) {
+                                            console.error('Error adding contact:', err);
+                                            alert('Error adding contact');
+                                        }
+                                    });
+                                });
+                            } catch (err) {
+                                resultsDiv.innerHTML = '<div style="color:#ff4444; text-align:center;">* Search failed</div>';
+                            }
+                        }, 300);
+                    });
+                    
+                    modal.querySelector('#cancelContactBtn').onclick = () => modal.remove();
+                }
+                
+                function showFallbackNewChatModal() {
+                    if (document.querySelector('.modal-overlay-custom')) return;
+                    
+                    const modal = document.createElement('div');
+                    modal.className = 'modal-overlay-custom';
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0, 0, 0, 0.85);
+                        backdrop-filter: blur(12px);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <div style="background: rgba(0, 20, 0, 0.95); border: 2px solid rgba(0, 212, 128, 0.4); border-radius: 24px; padding: 25px; width: 450px; max-width: 90%;">
+                            <h3 style="margin-bottom: 20px; color: #00d480; text-align: center;">NEW PRIVATE CHAT</h3>
+                            <input type="text" id="chatSearchInput" placeholder="Username or pubkey..." style="width: 100%; padding: 12px; background: rgba(0,0,0,0.6); border: 1px solid #00d480; border-radius: 20px; color: #00d480; margin-bottom: 20px;">
+                            <div id="chatSearchResults" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;"></div>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="cancelChatBtn" style="flex: 1; padding: 10px; background: rgba(0,20,0,0.6); border: 1px solid #ff4444; border-radius: 20px; color: #ff4444; cursor: pointer;">CANCEL</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    
+                    const searchInput = modal.querySelector('#chatSearchInput');
+                    const resultsDiv = modal.querySelector('#chatSearchResults');
+                    let searchTimeout;
+                    
+                    searchInput.addEventListener('input', async (e) => {
+                        clearTimeout(searchTimeout);
+                        const query = e.target.value.trim();
+                        if (query.length < 2) {
+                            resultsDiv.innerHTML = '<div style="color:#666; text-align:center;">* Type at least 2 characters...</div>';
+                            return;
+                        }
+                        
+                        searchTimeout = setTimeout(async () => {
+                            try {
+                                const API_BASE = window.location.origin;
+                                const currentUserPubkey = localStorage.getItem('chaos_pubkey');
+                                const headers = { 'Content-Type': 'application/json' };
+                                if (currentUserPubkey) headers['X-User-Pubkey'] = currentUserPubkey;
+                                
+                                const response = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`, { headers });
+                                if (!response.ok) throw new Error('Search failed');
+                                const users = await response.json();
+                                const filtered = users.filter(u => u.pubkey !== currentUserPubkey);
+                                
+                                if (filtered.length === 0) {
+                                    resultsDiv.innerHTML = '<div style="color:#666; text-align:center;">* No users found.</div>';
+                                    return;
+                                }
+                                
+                                resultsDiv.innerHTML = filtered.map(user => `
+                                    <div style="padding: 12px; margin: 8px 0; background: rgba(0,212,128,0.08); border-radius: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                        <div><strong style="color:#00d480;">${escapeHtml(user.username || 'Anonymous')}</strong><br><small style="color:#666;">${user.pubkey.slice(0, 16)}...</small></div>
+                                        <button class="start-chat-confirm" data-id="${user.id}" data-username="${escapeHtml(user.username)}" style="background: rgba(0,212,128,0.2); border: 1px solid #00d480; border-radius: 20px; padding: 5px 15px; cursor: pointer; color: #00d480;">CHAT →</button>
+                                    </div>
+                                `).join('');
+                                
+                                resultsDiv.querySelectorAll('.start-chat-confirm').forEach(btn => {
+                                    btn.addEventListener('click', async () => {
+                                        const contactId = parseInt(btn.dataset.id);
+                                        const username = btn.dataset.username;
+                                        
+                                        try {
+                                            const API_BASE = window.location.origin;
+                                            const currentUser = window.currentUser;
+                                            
+                                            // Сначала добавляем в контакты
+                                            const userResponse = await fetch(`${API_BASE}/users/${contactId}`);
+                                            const user = await userResponse.json();
+                                            
+                                            const currentPubkey = localStorage.getItem('chaos_pubkey');
+                                            await fetch(`${API_BASE}/users/me/contacts`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-User-Pubkey': currentPubkey
+                                                },
+                                                body: JSON.stringify({ contact_pubkey: user.pubkey })
+                                            });
+                                            
+                                            if (currentUser && currentUser.id) {
+                                                const chainResponse = await fetch(`${API_BASE}/chains/`, {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'X-User-Pubkey': currentPubkey
+                                                    },
+                                                    body: JSON.stringify({
+                                                        chain_type: 'private',
+                                                        participant1_id: currentUser.id,
+                                                        participant2_id: contactId
+                                                    })
+                                                });
+                                                
+                                                if (chainResponse.ok) {
+                                                    modal.remove();
+                                                    if (typeof loadContacts === 'function') await loadContacts();
+                                                    if (typeof loadPrivateChains === 'function') await loadPrivateChains();
+                                                    if (typeof renderPrivateChatsList === 'function') renderPrivateChatsList();
+                                                    if (typeof switchPrivateChat === 'function') switchPrivateChat(username);
+                                                    updateCompactContactsList();
+                                                    
+                                                    // Переключаемся на приватный чат
+                                                    const privateNav = document.querySelector('[data-view="private"]');
+                                                    if (privateNav && typeof switchView === 'function') {
+                                                        switchView('private');
+                                                    }
+                                                }
+                                            }
+                                        } catch (err) {
+                                            console.error('Error creating chat:', err);
+                                            alert('Failed to create chat');
+                                        }
+                                    });
+                                });
+                            } catch (err) {
+                                resultsDiv.innerHTML = '<div style="color:#ff4444; text-align:center;">* Search failed</div>';
+                            }
+                        }, 300);
+                    });
+                    
+                    modal.querySelector('#cancelChatBtn').onclick = () => modal.remove();
+                }
+                
+                function updateCompactContactsList() {
+                    const container = document.getElementById('compactContactsList');
+                    if (!container) return;
+                    
+                    const contacts = window.state?.contacts || [];
+                    if (contacts.length === 0) {
+                        container.innerHTML = '<span style="color:#666; font-size:11px;">No contacts yet. Use "ADD CONTACT" to add someone.</span>';
+                        return;
+                    }
+                    
+                    container.innerHTML = contacts.map(c => `
+                        <span class="contact-chip" data-username="${c.contact?.username || c.username || 'unknown'}">
+                            <i class="fa-regular fa-user"></i> ${c.contact?.username || c.username}
+                        </span>
+                    `).join('');
+                    
+                    container.querySelectorAll('.contact-chip').forEach(chip => {
+                        chip.addEventListener('click', () => {
+                            const username = chip.dataset.username;
+                            const msgInput = document.getElementById('messageInput');
+                            if (msgInput && username) {
+                                msgInput.value = `@${username} `;
+                                msgInput.focus();
+                            }
+                            if (typeof switchPrivateChat === 'function' && username) {
+                                switchPrivateChat(username);
+                            }
+                        });
+                    });
+                }
+                
+                function escapeHtml(text) {
+                    if (!text) return '';
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                }
+                
+                const originalRenderPrivateChatsList = window.renderPrivateChatsList;
+                if (originalRenderPrivateChatsList) {
+                    window.renderPrivateChatsList = function() {
+                        originalRenderPrivateChatsList();
+                        updateCompactContactsList();
+                    };
+                }
+                
+                const originalLoadContacts = window.loadContacts;
+                if (originalLoadContacts) {
+                    window.loadContacts = async function() {
+                        const result = await originalLoadContacts();
+                        setTimeout(updateCompactContactsList, 100);
+                        return result;
+                    };
+                }
+                
+                const originalRenderView = window.renderView;
+                if (originalRenderView) {
+                    window.renderView = function(viewName) {
+                        originalRenderView(viewName);
+                        if (viewName === 'global') {
+                            setTimeout(injectGlobalContactButtons, 50);
+                        }
+                        if (viewName === 'private') {
+                            setTimeout(updateCompactContactsList, 50);
+                        }
+                    };
+                }
+                
+                setTimeout(() => {
+                    const addBtn = document.getElementById('addContactBtnGlobal');
+                    const newChatBtn = document.getElementById('newPrivateChatBtnGlobal');
+                    if (addBtn) {
+                        addBtn.addEventListener('click', () => {
+                            if (typeof showAddContactModal === 'function') showAddContactModal();
+                            else showFallbackAddContactModal();
+                        });
+                    }
+                    if (newChatBtn) {
+                        newChatBtn.addEventListener('click', () => {
+                            if (typeof showNewChatDialog === 'function') showNewChatDialog();
+                            else showFallbackNewChatModal();
+                        });
+                    }
+                    
+                    injectGlobalContactButtons();
+                    updateCompactContactsList();
+                }, 500);
+                
+                setInterval(() => {
+                    updateCompactContactsList();
+                }, 5000);
+            });
+        })();
+    </script>
     <script src="./js/script.js"></script>
 </body>
 </html>

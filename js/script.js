@@ -46,6 +46,11 @@ const attachBtn = document.getElementById('attachBtn');
 const fileInput = document.getElementById('fileInput');
 let attachedFiles = [];
 
+const privateChatsState = {
+    activeChat: null,
+    chats: {},
+    messages: {}
+};
 // ============= API HELPER FUNCTIONS =============
 
 async function apiRequest(endpoint, options = {}) {
@@ -194,7 +199,6 @@ async function connectToChainWebSocket(chainId, chainType) {
 function handleNewMessage(message, chainType) {
     const messageId = message.id;
     
-    // CRITICAL FIX: Skip if this message was sent by current user
     // This prevents showing your own message twice (optimistic + WebSocket)
     if (message.sender_id === currentUser.id) {
         console.log(`Skipping own message ${messageId} from WebSocket broadcast`);
@@ -214,7 +218,36 @@ function handleNewMessage(message, chainType) {
     setTimeout(() => {
         state.pendingMessages.delete(messageId);
     }, 5000);
+
     
+    if (chainType === 'private') {
+        for (const [username, chat] of Object.entries(privateChatsState.chats)) {
+            if (chat.chainId === message.chain_id) {
+                const newMessage = {
+                    id: message.id,
+                    user: message.sender?.username || 'Unknown',
+                    text: message.content,
+                    type: 'whisper',
+                    time: formatTime(message.created_at),
+                    hash: message.hash,
+                    signature: message.signature,
+                    isOwn: false
+                };
+                
+                if (!privateChatsState.messages[username]) {
+                    privateChatsState.messages[username] = [];
+                }
+                privateChatsState.messages[username].push(newMessage);
+                
+                if (privateChatsState.activeChat === username) {
+                    renderActivePrivateChat();
+                }
+                break;
+            }
+        }
+        return;
+    }
+
     // Check if message already exists in state
     let messageArray = null;
     if (chainType === 'global') messageArray = state.messages.global;
@@ -498,50 +531,51 @@ async function initializeChains() {
     }
     
     await loadContacts();
+    await loadPrivateChains(); 
 }
 
 // ============= MESSAGES =============
 
-async function loadMessages(chainId, viewName) {
-    if (!chainId) return;
-    
-    try {
-        const messages = await apiRequest(`/messages/chains/${chainId}?limit=200`);
-        
+//async function loadMessages(chainId, viewName) {
+//    if (!chainId) return;
+//    
+//    try {
+//        const messages = await apiRequest(`/messages/chains/${chainId}?limit=200`);
+        //
         // Clear existing messages
-        state.messages[viewName] = [];
+        //state.messages[viewName] = [];
         
         // Add messages to state
-        messages.forEach(msg => {
-            const messageObj = {
-                id: msg.id,
-                user: msg.sender?.username || 'Unknown',
-                text: msg.content,
-                type: viewName === 'private' ? 'whisper' : (viewName === 'feed' ? 'feed' : 'chat'),
-                time: formatTime(msg.created_at),
-                hash: msg.hash,
-                signature: msg.signature
-            };
-            state.messages[viewName].push(messageObj);
-            state.pendingMessages.add(msg.id);
-        });
+        //messages.forEach(msg => {
+        //    const messageObj = {
+        //        id: msg.id,
+        //        user: msg.sender?.username || 'Unknown',
+        //        text: msg.content,
+        //        type: viewName === 'private' ? 'whisper' : (viewName === 'feed' ? 'feed' : 'chat'),
+        //        time: formatTime(msg.created_at),
+        //        hash: msg.hash,
+        //        signature: msg.signature
+        //    };
+        //    state.messages[viewName].push(messageObj);
+        //    state.pendingMessages.add(msg.id);
+       // });
         
         // Cleanup pending after 5 seconds
-        setTimeout(() => {
-            messages.forEach(msg => {
-                state.pendingMessages.delete(msg.id);
-            });
-        }, 5000);
-        
-        if (state.currentView === viewName) {
-            renderView(viewName);
-        }
-        
-        console.log(`Loaded ${messages.length} messages for ${viewName}`);
-    } catch (error) {
-        console.error(`Failed to load ${viewName} messages:`, error);
-    }
-}
+       // setTimeout(() => {
+       //     messages.forEach(msg => {
+       //         state.pendingMessages.delete(msg.id);
+       //     });
+       // }, 5000);
+       // 
+       // if (state.currentView === viewName) {
+       //     renderView(viewName);
+       // }
+       // 
+       // console.log(`Loaded ${messages.length} messages for ${viewName}`);
+//    } catch (error) {
+//        console.error(`Failed to load ${viewName} messages:`, error);
+//    }
+//}
 
 async function loadContacts() {
     if (!currentUser) return;
@@ -585,6 +619,389 @@ async function loadContacts() {
         }
     } catch (error) {
         console.error('Failed to load contacts:', error);
+    }
+}
+
+// List of chats
+function renderPrivateChatsList() {
+    const view = views.private;
+    if (!view) return;
+    
+    view.innerHTML = '';
+    
+    const chatsContainer = document.createElement('div');
+    chatsContainer.className = 'private-chats-list';
+    chatsContainer.style.cssText = `
+        border-bottom: 1px solid rgba(0, 212, 128, 0.3);
+        padding: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    `;
+    
+    const newChatBtn = document.createElement('button');
+    newChatBtn.textContent = '+ NEW CHAT';
+    newChatBtn.style.cssText = `
+        background: rgba(0, 20, 0, 0.4);
+        border: 1px solid rgba(0, 212, 128, 0.3);
+        border-radius: 20px;
+        color: #00d480;
+        padding: 6px 15px;
+        cursor: pointer;
+        font-family: monospace;
+    `;
+    newChatBtn.onclick = () => showNewChatDialog();
+    chatsContainer.appendChild(newChatBtn);
+    
+    const chatList = document.createElement('div');
+    chatList.style.cssText = `
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        flex: 1;
+    `;
+    
+    for (const [username, chat] of Object.entries(privateChatsState.chats)) {
+        const chatBtn = document.createElement('button');
+        chatBtn.textContent = username;
+        chatBtn.style.cssText = `
+            background: ${privateChatsState.activeChat === username ? 'rgba(0, 212, 128, 0.2)' : 'rgba(0, 20, 0, 0.4)'};
+            border: 1px solid rgba(0, 212, 128, 0.3);
+            border-radius: 20px;
+            color: #00d480;
+            padding: 6px 15px;
+            cursor: pointer;
+            font-family: monospace;
+        `;
+        chatBtn.onclick = () => switchPrivateChat(username);
+        chatList.appendChild(chatBtn);
+    }
+    
+    chatsContainer.appendChild(chatList);
+    view.appendChild(chatsContainer);
+    
+    const messagesContainer = document.createElement('div');
+    messagesContainer.id = 'private-messages-container';
+    messagesContainer.style.cssText = `
+        height: calc(100% - 80px);
+        overflow-y: auto;
+        padding: 10px;
+    `;
+    view.appendChild(messagesContainer);
+    
+    // Show messages from the current chat
+    if (privateChatsState.activeChat) {
+        renderActivePrivateChat();
+    } else {
+        messagesContainer.innerHTML = '<div class="message system"><div class="content">* Select a chat or create a new one to start messaging privately.</div></div>';
+    }
+}
+
+// Switch between chats
+function switchPrivateChat(username) {
+    privateChatsState.activeChat = username;
+    renderPrivateChatsList();
+    renderActivePrivateChat();
+
+    markMessagesAsRead(username);
+}
+
+function createPrivateMessageElement(msg) {
+    const div = document.createElement('div');
+    div.className = 'message whisper';
+    div.setAttribute('data-message-id', msg.id);
+
+    if (msg.isOwn) div.classList.add('own-message');
+
+    const username = msg.isOwn ? `→ ${msg.user}` : `← ${msg.user}`;
+
+    let contentHtml = escapeHtml(msg.text);
+
+    // Handle image embeds
+    contentHtml = contentHtml.replace(/\[IMG:([^\]]+)\]/g, (match, filename) => {
+        const cleanFilename = filename.trim();
+        return `<img src="assets/images/${cleanFilename}"
+            style="max-width: 200px; max-height: 150px; border: 1px solid #00d480; border-radius: 16px; margin: 5px 0;"
+            onerror="this.onerror=null; this.src='https://i.imgur.com/${cleanFilename}';"
+            >`;
+    });
+
+    // Handle URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    contentHtml = contentHtml.replace(urlRegex, url => {
+        if (url.match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i)) {
+            return `<img src="${url}"
+                style="max-width: 200px; max-height: 150px; border-radius: 16px; border: 1px solid #00d480; margin: 5px 0;"
+                alt="image">`;
+        } else {
+            return `<a href="${url}" target="_blank" style="color:#8ff" rel="noopener noreferrer">[LINK]</a>`;
+        }
+    });
+
+    div.innerHTML = `
+        <div class="meta">
+            ${username} <span class="time">${msg.time}</span>
+        </div>
+        <div class="content">
+            ${contentHtml}
+        </div>
+    `;
+    return div;
+}
+
+function showNewChatDialog() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    `;
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        background: rgba(0, 20, 0, 0.9);
+        border: 2px solid rgba(0, 212, 128, 0.3);
+        border-radius: 20px;
+        padding: 20px;
+        width: 400px;
+        max-width: 90%;
+    `;
+
+    dialog.innerHTML = `
+        <h3 style="margin-bottom: 15px;">NEW PRIVATE CHAT</h3>
+        <input type="text" id="new-chat-search" placeholder="Search by username or pubkey..."
+               style="width: 100%; padding: 10px; background: rgba(0,0,0,0.6); border: 1px solid #00d480;
+                      border-radius: 20px; color: #00d480; margin-bottom: 15px;">
+        <div id="search-results" style="max-height: 300px; overflow-y: auto;"></div>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button id="cancel-chat-btn" style="flex: 1; padding: 8px; background: rgba(255,0,0,0.2);
+                    border: 1px solid #ff4444; border-radius: 20px; color: #ff4444; cursor: pointer;">
+                CANCEL
+            </button>
+        </div>
+    `;
+
+    modal.appendChild(dialog);
+    document.body.appendChild(modal);
+
+    const searchInput = dialog.querySelector('#new-chat-search');
+    const resultsDiv = dialog.querySelector('#search-results');
+
+    // User search 
+    let searchTimeout;
+    searchInput.addEventListener('input', async (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+
+        if (query.length < 2) {
+            resultsDiv.innerHTML = '<div class="message system"><div class="content">* Type at least 2 characters to search...</div></div>';
+            return;
+        }
+
+        searchTimeout = setTimeout(async () => {
+            try {
+                const users = await apiRequest(`/users/search?q=${encodeURIComponent(query)}`);
+                resultsDiv.innerHTML = '';
+
+                const filteredUsers = users.filter(u => u.id !== currentUser.id);
+
+                if (filteredUsers.length === 0) {
+                    resultsDiv.innerHTML = '<div class="message system"><div class="content">* No users found.</div></div>';
+                    return;
+                }
+
+                filteredUsers.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.style.cssText = `
+                        padding: 10px;
+                        margin: 5px 0;
+                        background: rgba(0, 212, 128, 0.1);
+                        border-radius: 16px;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    `;
+                    userDiv.innerHTML = `
+                        <div>
+                            <strong>${escapeHtml(user.username || 'Anonymous')}</strong><br>
+                            <small style="color: #666;">${user.pubkey.slice(0, 16)}...</small>
+                        </div>
+                        <button class="start-chat-btn" data-user-id="${user.id}" data-username="${escapeHtml(user.username)}"
+                                style="background: rgba(0,212,128,0.2); border: 1px solid #00d480;
+                                       border-radius: 20px; padding: 5px 15px; cursor: pointer; color: #00d480;">
+                            CHAT →
+                        </button>
+                    `;
+
+                    const startBtn = userDiv.querySelector('.start-chat-btn');
+                    startBtn.addEventListener('click', () => {
+                        createPrivateChat(user.id, user.username);
+                        modal.remove();
+                    });
+
+                    resultsDiv.appendChild(userDiv);
+                });
+            } catch (error) {
+                console.error('Search failed:', error);
+                resultsDiv.innerHTML = '<div class="message system"><div class="content" style="color: #ff4444;">* Search failed. Try again.</div></div>';
+            }
+        }, 300);
+    });
+
+    dialog.querySelector('#cancel-chat-btn').addEventListener('click', () => modal.remove());
+}
+
+function renderActivePrivateChat() {
+    const messagesContainer = document.getElementById('private-messages-container');
+    if (!messagesContainer) return;
+
+    const username = privateChatsState.activeChat;
+    if (!username) {
+        messagesContainer.innerHTML = '<div class="message system"><div class="content">* Select a chat to start messaging.</div></div>';
+        return;
+    }
+
+    const messages = privateChatsState.messages[username] || [];
+    messagesContainer.innerHTML = '';
+
+    if (messages.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'message system';
+        emptyMsg.innerHTML = '<div class="content">* No messages yet. Send a message to start the conversation.</div>';
+        messagesContainer.appendChild(emptyMsg);
+    } else {
+        messages.forEach(msg => {
+            messagesContainer.appendChild(createPrivateMessageElement(msg));
+        });
+    }
+
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
+}
+
+async function createPrivateChat(contactId, username) {
+    if (!currentUser) return;
+
+    try {
+        const user = await apiRequest(`/users/${contactId}`);
+
+        await apiRequest('/users/me/contacts', {
+            method: 'POST',
+            body: JSON.stringify({ contact_pubkey: user.pubkey })
+        });
+
+        const chain = await apiRequest('/chains/', {
+            method: 'POST',
+            body: JSON.stringify({
+                chain_type: 'private',
+                participant1_id: currentUser.id,
+                participant2_id: contactId
+            })
+        });
+
+        privateChatsState.chats[username] = {
+            chainId: chain.id,
+            contactId: contactId,
+            username: username
+        };
+        privateChatsState.messages[username] = [];
+
+        await connectToChainWebSocket(chain.id, 'private');
+
+        await loadContacts();
+
+        switchPrivateChat(username);
+
+        console.log(`Created private chat with ${username}`);
+
+    } catch (error) {
+        console.error('Failed to create private chat:', error);
+        alert(`Failed to create chat: ${error.message}`);
+    }
+}
+
+async function sendPrivateMessage(username, text) {
+    const chat = privateChatsState.chats[username];
+    if (!chat) {
+        console.error('Chat not found:', username);
+        return false;
+    }
+
+    const now = new Date();
+    const time = formatTime(now);
+
+    let prevHash = null;
+    const messages = privateChatsState.messages[username];
+    if (messages.length > 0 && messages[messages.length - 1].hash) {
+        prevHash = messages[messages.length - 1].hash;
+    }
+
+    const tempId = Date.now();
+    const optimisticMsg = {
+        id: tempId,
+        user: currentUser.name,
+        text: text,
+        type: 'whisper',
+        time: time,
+        isOwn: true,
+        sending: true
+    };
+
+    privateChatsState.messages[username].push(optimisticMsg);
+    if (privateChatsState.activeChat === username) {
+        renderActivePrivateChat();
+    }
+
+    try {
+        const result = await sendMessageToAPI(text, 'private', chat.chainId, prevHash);
+
+        const index = privateChatsState.messages[username].findIndex(m => m.id === tempId);
+        if (index !== -1) {
+            privateChatsState.messages[username].splice(index, 1);
+        }
+
+        const realMsg = {
+            id: result.id,
+            user: currentUser.name,
+            text: text,
+            type: 'whisper',
+            time: time,
+            hash: result.hash,
+            signature: result.signature,
+            isOwn: true
+        };
+
+        privateChatsState.messages[username].push(realMsg);
+
+        if (privateChatsState.activeChat === username) {
+            renderActivePrivateChat();
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Failed to send private message:', error);
+
+        const index = privateChatsState.messages[username].findIndex(m => m.id === tempId);
+        if (index !== -1) {
+            privateChatsState.messages[username].splice(index, 1);
+        }
+
+        if (privateChatsState.activeChat === username) {
+            renderActivePrivateChat();
+        }
+
+        return false;
     }
 }
 
@@ -647,6 +1064,96 @@ function formatTime(isoString) {
         second: '2-digit',
         hour12: false
     });
+}
+
+// Load user's private chat list
+async function loadPrivateChains() {
+    if (!currentUser) return;
+
+    try {
+        const chains = await apiRequest('/chains/?chain_type=private');
+        console.log('Loaded private chains:', chains);
+
+        for (const chain of chains) {
+            const otherId = chain.participant1_id === currentUser.id
+                ? chain.participant2_id
+                : chain.participant1_id;
+
+            const contact = state.contacts.find(c => c.contact_id === otherId);
+            if (contact) {
+                const username = contact.contact.username;
+                privateChatsState.chats[username] = {
+                    chainId: chain.id,
+                    contactId: otherId,
+                    username: username
+                };
+                privateChatsState.messages[username] = [];
+
+                await loadMessages(chain.id, 'private', username);
+
+                await connectToChainWebSocket(chain.id, 'private');
+            }
+        }
+
+        renderPrivateChatsList();
+    } catch (error) {
+        console.error('Failed to load private chains:', error);
+    }
+}
+
+// Load messages for a single chat
+async function loadMessages(chainId, viewName, chatUsername = null) {
+    if (!chainId) return;
+    
+    try {
+        const messages = await apiRequest(`/messages/chains/${chainId}?limit=200`);
+        
+        let targetArray;
+        if (chatUsername) {
+            if (!privateChatsState.messages[chatUsername]) {
+                privateChatsState.messages[chatUsername] = [];
+            }
+            targetArray = privateChatsState.messages[chatUsername];
+        } else {
+            targetArray = state.messages[viewName];
+        }
+        
+        // Clear existing messages
+        targetArray.length = 0;
+        
+        // Add messages to state
+        messages.forEach(msg => {
+            const isOwn = msg.sender_id === currentUser.id;
+            const messageObj = {
+                id: msg.id,
+                user: isOwn ? currentUser.name : (msg.sender?.username || 'Unknown'),
+                text: msg.content,
+                type: 'whisper',
+                time: formatTime(msg.created_at),
+                hash: msg.hash,
+                signature: msg.signature,
+                isOwn: isOwn
+            };
+            targetArray.push(messageObj);
+            state.pendingMessages.add(msg.id);
+        });
+        
+        // Cleanup pending after 5 seconds
+        setTimeout(() => {
+            messages.forEach(msg => {
+                state.pendingMessages.delete(msg.id);
+            });
+        }, 5000);
+        
+        // If this is the active chat, render it
+        if (chatUsername && privateChatsState.activeChat === chatUsername) {
+            renderActivePrivateChat();
+        }
+        
+        console.log(`Loaded ${messages.length} messages for private chat`);
+    } catch (error) {
+        console.error(`Failed to load private messages:`, error);
+    }
 }
 
 // ============= UI RENDERING =============
@@ -775,7 +1282,17 @@ function switchView(viewName) {
 async function sendMessage() {
     let text = messageInput.value.trim();
     if (!text && attachedFiles.length === 0) return;
-    
+
+    if (state.currentView === 'private' && privateChatsState.activeChat) {
+        const success = await sendPrivateMessage(privateChatsState.activeChat, text);
+        if (success) {
+            messageInput.value = '';
+            attachedFiles = [];
+            fileInput.value = '';
+        }
+        return;
+    }
+
     const now = new Date();
     const time = formatTime(now);
     let type = 'chat';
