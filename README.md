@@ -4,8 +4,8 @@ Tor messenger with glass terminal UI
 
 **UPD, April 28, 2026**: private chats are finally here
 
-![private chat example](assets/images/pr1.jpg')
-![private chat example](assets/images/pr2.jpg')
+![private chat example](assets/images/pr1.jpg)
+![private chat example](assets/images/pr2.jpg)
 
 ![sample screen](screen.png)
 
